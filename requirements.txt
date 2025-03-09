@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+aiohttp
+pypdf
+langchain
+langchain-community
+python-dotenv
+typing-extensions
