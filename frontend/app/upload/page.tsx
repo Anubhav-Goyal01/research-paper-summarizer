@@ -23,7 +23,6 @@ export default function UploadPage() {
 
     setIsUploading(true);
     
-    // In a real implementation, you would do something like this:
     const formData = new FormData();
     formData.append('file', file);
     const response = await fetch('http://localhost:8000/api/analyze', {

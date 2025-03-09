@@ -1,49 +1,112 @@
 'use client';
 
+import React from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Card } from '../../../components/Card';
 import KeyConcepts from '../../../components/KeyConcepts';
 import ProblemStatement from '../../../components/ProblemStatement';
 import FullExplanation from '../../../components/FullExplanation';
 import PseudoCode from '../../../components/PseudoCode';
-import React from 'react';
+import { Loader } from '../../../components/Loader';
 
 export default function ResultsPage({ params }: { params: { jobId: string } }) {
   const { jobId } = params;
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number>(0);
+  const [statusMessage, setStatusMessage] = useState<string>('Initializing analysis...');
 
   useEffect(() => {
+    let pollingInterval: NodeJS.Timeout;
+    let progressCounter = 0;
+    
     const fetchData = async () => {
       try {
         const response = await fetch(`http://localhost:8000/api/status/${jobId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        
         const responseData = await response.json();
-        setData(responseData);
+        
+        if (responseData.status === 'completed') {
+          setData(responseData);
+          setLoading(false);
+          clearInterval(pollingInterval);
+        } 
+        else if (responseData.status === 'in_progress') {
+          setStatusMessage(`Analyzing paper: ${responseData.filename || 'your document'}`);
+          
+          if (progressCounter < 90) {
+            progressCounter += Math.floor(Math.random() * 5) + 1;
+            setProgress(Math.min(progressCounter, 90));
+          }
+        } 
+        else if (responseData.status === 'failed') {
+          setError(`Analysis failed: ${responseData.error || 'Unknown error'}`);
+          setLoading(false);
+          clearInterval(pollingInterval);
+        }
       } catch (error) {
         console.error('Error fetching paper analysis:', error);
-      } finally {
+        setError('Failed to connect to analysis server. Please try again later.');
         setLoading(false);
+        clearInterval(pollingInterval);
       }
     };
+
     fetchData();
+    pollingInterval = setInterval(fetchData, 3000); 
+
+    const progressInterval = setInterval(() => {
+      if (progressCounter < 90) {
+        progressCounter += 1;
+        setProgress(progressCounter);
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(pollingInterval);
+      clearInterval(progressInterval);
+    };
   }, [jobId]);
 
   if (loading) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <header className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold text-primary-600">Analysis Results</h1>
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <Link 
+              href="/"
+              className="text-sm font-medium text-primary-600 hover:text-primary-500 transition-colors"
+            >
+              &larr; Back to Home
+            </Link>
+            <span className="text-sm text-neutral-500">Job ID: {jobId}</span>
           </div>
-        </header>
-        <div className="flex-grow flex items-center justify-center">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="h-12 w-12 rounded-full bg-primary-200 mb-4"></div>
-            <div className="h-4 w-48 bg-primary-200 rounded mb-2"></div>
-            <div className="h-3 w-36 bg-primary-100 rounded"></div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-8">
+            <Loader message={statusMessage} />
+            
+            <div className="mt-8 max-w-md mx-auto">
+              <div className="w-full bg-neutral-200 rounded-full h-2.5">
+                <div 
+                  className="bg-primary-600 h-2.5 rounded-full transition-all duration-500" 
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-neutral-500">
+                <span>Uploading</span>
+                <span>Analyzing</span>
+                <span>Formatting</span>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
