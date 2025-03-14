@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from typing import Dict, List, Any, Optional
-
+import os
 from app.clients.base import AIClient
 
 class GroqAIClient(AIClient):
@@ -13,7 +13,7 @@ class GroqAIClient(AIClient):
     
     def __init__(self):
         super().__init__()
-        self.api_key = "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"
+        self.api_key = os.environ.get("GROQ_API_KEY")
         self.url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = "deepseek-r1-distill-llama-70b"
 
