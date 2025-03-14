@@ -6,7 +6,9 @@ import os
 from typing import Dict, Any
 
 from app.core.paper_analyzer import PaperAnalyzer
-from app.models.schemas import PaperAnalysisResponse, ErrorResponse
+from app.core.chat_manager import ChatManager
+from app.clients.groq_ai import GroqAIClient
+from app.models.schemas import ErrorResponse, ChatRequest
 
 router = APIRouter()
 
@@ -116,3 +118,100 @@ async def delete_job(job_id: str):
     del analysis_cache[job_id]
     
     return {"message": f"Job {job_id} deleted successfully"}
+
+
+@router.post("/jobs/{job_id}/chat", 
+             response_model=Dict[str, Any],
+             responses={
+                 200: {"description": "Chat response"},
+                 404: {"model": ErrorResponse, "description": "Job not found"},
+                 400: {"model": ErrorResponse, "description": "Bad request"}
+             })
+async def chat_with_paper(job_id: str, chat_request: ChatRequest):
+    """
+    Chat with an AI about a previously analyzed paper.
+    
+    Args:
+        job_id: The ID of the analysis job
+        chat_request: The chat request containing the user's message
+        
+    Returns:
+        Dictionary containing the response and updated chat history
+    """
+    if job_id not in analysis_cache:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Job ID {job_id} not found"
+        )
+    
+    job_info = analysis_cache[job_id]
+    
+    if job_info["status"] != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Job {job_id} is not completed yet"
+        )
+    
+    if "result" not in job_info or not job_info["result"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No analysis result found for job {job_id}"
+        )
+    
+    if "chat_history" not in job_info:
+        job_info["chat_history"] = []
+    
+    chat_manager = ChatManager(GroqAIClient())
+    
+    try:
+        chat_result = await chat_manager.process_chat_message(
+            job_id=job_id,
+            user_message=chat_request.message,
+            analysis_result=job_info["result"],
+            chat_history=job_info["chat_history"]
+        )
+        
+        job_info["chat_history"] = chat_result["updated_history"]
+        
+        return {
+            "response": chat_result["response"],
+            "job_id": job_id
+        }
+    except Exception as e:
+        logging.error(f"Error processing chat message: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing chat message: {str(e)}"
+        )
+
+
+@router.get("/jobs/{job_id}/chat", 
+            response_model=Dict[str, Any],
+            responses={
+                200: {"description": "Chat history"},
+                404: {"model": ErrorResponse, "description": "Job not found"}
+            })
+async def get_chat_history(job_id: str):
+    """
+    Get the chat history for a specific job.
+    
+    Args:
+        job_id: The ID of the analysis job
+        
+    Returns:
+        Dictionary containing the chat history
+    """
+    if job_id not in analysis_cache:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Job ID {job_id} not found"
+        )
+    
+    job_info = analysis_cache[job_id]
+    
+    chat_history = job_info.get("chat_history", [])
+    
+    return {
+        "job_id": job_id,
+        "chat_history": chat_history
+    }

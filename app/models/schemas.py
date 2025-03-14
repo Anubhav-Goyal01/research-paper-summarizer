@@ -72,3 +72,8 @@ class ErrorResponse(BaseModel):
     """Error response model."""
     error: str
     details: Optional[str] = None
+
+
+class ChatRequest(BaseModel):
+    """Request model for chat interactions."""
+    message: str = Field(..., description="The user's message or question about the paper")

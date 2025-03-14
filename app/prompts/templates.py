@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 class PromptTemplates:
     """
@@ -214,3 +214,70 @@ Format your response as a JSON object with the following structure:
   "potential_challenges": ["implementation challenges to be aware of"]
 }}"""}
         ]
+
+    @staticmethod
+    def chat_prompt(user_message: str, analysis_result: Dict[str, Any], chat_history: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, str]]:
+        """
+        Create a prompt for chat interactions about a previously analyzed paper.
+        
+        Args:
+            user_message: The user's query or message
+            analysis_result: The complete paper analysis result
+            chat_history: Previous chat interactions, if any
+            
+        Returns:
+            List of message dictionaries for the LLM
+        """
+        system_content = """You are an expert academic researcher and AI assistant specializing in explaining research papers.
+
+You have previously analyzed a research paper and provided detailed information about its key concepts, problem statement, 
+methodology, results, and generated pseudo-code based on the paper.
+
+Your task is to answer questions about this paper using the analysis you've already done. Provide clear, 
+accurate, and helpful responses based specifically on the paper content and your analysis.
+
+You should respond conversationally but maintain academic rigor. If a question falls outside the scope of the paper 
+or your analysis, acknowledge this limitation politely.
+
+Provide your response in a structured format with appropriate markdown formatting when needed."""
+        
+        paper_context = "Paper Analysis Summary:\n"
+        
+        if "metadata" in analysis_result:
+            metadata = analysis_result["metadata"]
+            title = metadata.get("title", "Unknown")
+            authors = metadata.get("authors", "Unknown")
+            paper_context += f"Title: {title}\nAuthors: {authors}\n\n"
+        
+        if "key_concepts" in analysis_result:
+            key_concepts = analysis_result["key_concepts"]
+            if "core_technologies" in key_concepts and key_concepts["core_technologies"]:
+                core_tech = ", ".join(key_concepts["core_technologies"] if isinstance(key_concepts["core_technologies"], list) else [key_concepts["core_technologies"]])
+                paper_context += f"Core Technologies: {core_tech}\n"
+            if "field_of_study" in key_concepts:
+                paper_context += f"Field: {key_concepts['field_of_study']}\n"
+        
+        if "problem_statement" in analysis_result:
+            problem = analysis_result["problem_statement"].get("problem", "")
+            if problem:
+                paper_context += f"Problem: {problem}\n"
+        
+        if "full_explanation" in analysis_result:
+            approach = analysis_result["full_explanation"].get("approach_summary", "")
+            if approach:
+                paper_context += f"Approach: {approach}\n"
+        
+        chat_context = ""
+        if chat_history and len(chat_history) > 0:
+            chat_context = "Previous conversation:\n"
+            recent_history = chat_history[-5:] if len(chat_history) > 5 else chat_history
+            for entry in recent_history:
+                chat_context += f"User: {entry['query']}\n"
+                chat_context += f"Assistant: {entry['response']}\n\n"
+        
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": f"{paper_context}\n{chat_context}\nUser's question: {user_message}\n\nFormat your response as a JSON object with the following structure:\n{{\n  \"answer\": \"your comprehensive answer to the user's question\"\n}}"}
+        ]
+        
+        return messages
