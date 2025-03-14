@@ -9,6 +9,7 @@ import ProblemStatement from '../../../components/ProblemStatement';
 import FullExplanation from '../../../components/FullExplanation';
 import PseudoCode from '../../../components/PseudoCode';
 import { Loader } from '../../../components/Loader';
+import ChatPanel from '../../../components/ChatPanel';
 
 export default function ResultsPage({ params }: { params: { jobId: string } }) {
   const { jobId } = params;
@@ -168,6 +169,9 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
           <PseudoCode data={pseudo_code} />
         </div>
       </div>
+      
+      {/* Chat Panel */}
+      <ChatPanel jobId={jobId} />
     </main>
   );
 }
