@@ -27,7 +27,12 @@ Ever found yourself drowning in complex research papers? Me too! That's why I bu
    cd research-paper-summarizer
    pip install -r requirements.txt
    ```
-3. Start the FastAPI server:
+3. Create a `.env` file in the `app` directory with your Groq API key:
+   ```
+   GROQ_API_KEY=your_groq_api_key_here
+   ```
+   You can get an API key by signing up at [groq.com](https://console.groq.com/keys)
+4. Start the FastAPI server:
    ```bash
    uvicorn app.main:app --reload
    ```
