@@ -10,6 +10,7 @@ import FullExplanation from '../../../components/FullExplanation';
 import PseudoCode from '../../../components/PseudoCode';
 import { Loader } from '../../../components/Loader';
 import ChatPanel from '../../../components/ChatPanel';
+import KnowledgeGraph from '../../../components/KnowledgeGraph';
 
 export default function ResultsPage({ params }: { params: { jobId: string } }) {
   const { jobId } = params;
@@ -18,6 +19,7 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
   const [statusMessage, setStatusMessage] = useState<string>('Initializing analysis...');
+  const [activeTab, setActiveTab] = useState('summary');
 
   useEffect(() => {
     let pollingInterval: NodeJS.Timeout;
@@ -133,8 +135,8 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
     );
   }
 
-  const { metadata, key_concepts, problem_statement, full_explanation, pseudo_code } = data.result;
-
+  const { metadata, key_concepts, problem_statement, full_explanation, pseudo_code, knowledge_graph } = data.result;
+  
   return (
     <main className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm sticky top-0 z-10">
@@ -155,19 +157,69 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
             <p className="text-neutral-600">{metadata.authors}</p>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <KeyConcepts data={key_concepts} />
-          <ProblemStatement data={problem_statement} />
+        
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <div className="border-b border-neutral-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('summary')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'summary' ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'}`}
+              >
+                Summary View
+              </button>
+              <button
+                onClick={() => setActiveTab('knowledge-graph')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'knowledge-graph' ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'}`}
+              >
+                Knowledge Graph
+              </button>
+              <button
+                onClick={() => setActiveTab('implementation')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'implementation' ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'}`}
+              >
+                Implementation
+              </button>
+            </nav>
+          </div>
         </div>
 
-        <div className="mb-8">
-          <FullExplanation data={full_explanation} />
-        </div>
+        {/* Tab Content */}
+        {activeTab === 'summary' && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <KeyConcepts data={key_concepts} />
+              <ProblemStatement data={problem_statement} />
+            </div>
 
-        <div className="mb-8">
-          <PseudoCode data={pseudo_code} />
-        </div>
+            <div className="mb-8">
+              <FullExplanation data={full_explanation} />
+            </div>
+          </>
+        )}
+        
+        {activeTab === 'knowledge-graph' && (
+          <div className="mb-8">
+            <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
+              <h2 className="text-xl font-bold text-neutral-800 mb-4">Knowledge Graph</h2>
+              <p className="text-neutral-600 mb-6">This visual representation shows the key concepts and their relationships within the research paper. Click on nodes to explore connections.</p>
+              
+              <div className="h-[600px] w-full">
+                <KnowledgeGraph 
+                  graphData={knowledge_graph || { nodes: [], edges: [] }} 
+                  height={600} 
+                  width={1100} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'implementation' && (
+          <div className="mb-8">
+            <PseudoCode data={pseudo_code} />
+          </div>
+        )}
       </div>
       
       {/* Chat Panel */}

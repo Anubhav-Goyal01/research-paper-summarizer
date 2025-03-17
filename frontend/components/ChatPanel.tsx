@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FiSend, FiX, FiMessageSquare } from 'react-icons/fi';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessage {
   timestamp: string;
@@ -146,63 +148,74 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ jobId }) => {
   };
   
   const renderMessageContent = (content: string) => {
-    const codeBlockRegex = /```([\w-]*)\n([\s\S]*?)```/g;
-    
-    let parts = [];
-    let lastIndex = 0;
-    let match;
-    
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push({
-          type: 'text',
-          content: content.slice(lastIndex, match.index)
-        });
-      }
-      
-      const language = match[1].trim() || 'text';
-      const code = match[2].trim();
-      parts.push({
-        type: 'code',
-        language,
-        content: code
-      });
-      
-      lastIndex = match.index + match[0].length;
-    }
-    
-    if (lastIndex < content.length) {
-      parts.push({
-        type: 'text',
-        content: content.slice(lastIndex)
-      });
-    }
-    
-    if (parts.length === 0) {
-      return <p className="whitespace-pre-wrap">{content}</p>;
-    }
-    
     return (
-      <div>
-        {parts.map((part, index) => {
-          if (part.type === 'code') {
-            return (
-              <div key={index} className="my-2 rounded-md overflow-hidden">
-                <SyntaxHighlighter 
-                  language={part.language} 
-                  style={tomorrow}
-                  customStyle={{ margin: 0 }}
-                  wrapLines={true}
-                  wrapLongLines={true}
-                >
-                  {part.content}
-                </SyntaxHighlighter>
+      <div className="markdown-content">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code({ node, className, children, ...props }: any) {
+              const match = /language-(\w+)/.exec(className || '');
+              const isCodeBlock = !props.inline && match;
+              return isCodeBlock ? (
+                <div className="my-2 rounded-md overflow-hidden">
+                  <SyntaxHighlighter
+                    language={match ? match[1] : ''}
+                    style={tomorrow}
+                    customStyle={{ margin: 0 }}
+                    wrapLines={true}
+                    wrapLongLines={true}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                </div>
+              ) : (
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              );
+            },
+            p: ({ children }: any) => <p className="whitespace-pre-wrap mb-2">{children}</p>,
+            a: ({ href, children }: any) => (
+              <a 
+                href={href} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-primary-600 hover:underline"
+              >
+                {children}
+              </a>
+            ),
+            ul: ({ children }: any) => <ul className="list-disc pl-5 mb-4">{children}</ul>,
+            ol: ({ children }: any) => <ol className="list-decimal pl-5 mb-4">{children}</ol>,
+            li: ({ children }: any) => <li className="mb-1">{children}</li>,
+            h1: ({ children }: any) => <h1 className="text-2xl font-bold my-4">{children}</h1>,
+            h2: ({ children }: any) => <h2 className="text-xl font-bold my-3">{children}</h2>,
+            h3: ({ children }: any) => <h3 className="text-lg font-bold my-2">{children}</h3>,
+            h4: ({ children }: any) => <h4 className="text-base font-bold my-1">{children}</h4>,
+            blockquote: ({ children }: any) => (
+              <blockquote className="border-l-4 border-neutral-300 pl-4 italic my-2">
+                {children}
+              </blockquote>
+            ),
+            hr: () => <hr className="my-4 border-neutral-300" />,
+            table: ({ children }: any) => (
+              <div className="overflow-x-auto my-4">
+                <table className="border-collapse border border-neutral-300 w-full">
+                  {children}
+                </table>
               </div>
-            );
-          } else {
-            return <p key={index} className="whitespace-pre-wrap mb-2">{part.content}</p>;
-          }
-        })}
+            ),
+            thead: ({ children }: any) => <thead className="bg-neutral-100">{children}</thead>,
+            tbody: ({ children }: any) => <tbody>{children}</tbody>,
+            tr: ({ children }: any) => <tr>{children}</tr>,
+            th: ({ children }: any) => (
+              <th className="border border-neutral-300 px-4 py-2 text-left font-bold">{children}</th>
+            ),
+            td: ({ children }: any) => <td className="border border-neutral-300 px-4 py-2">{children}</td>,
+          }}
+        >
+          {content}
+        </ReactMarkdown>
       </div>
     );
   };
