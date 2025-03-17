@@ -3,6 +3,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from dotenv import load_dotenv
+load_dotenv()
 
 from app.api.routes import router as api_router
 

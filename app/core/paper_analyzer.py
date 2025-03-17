@@ -7,6 +7,7 @@ from typing import Dict, List, Any, Optional
 from app.clients.groq_ai import GroqAIClient
 from app.prompts.templates import PromptTemplates
 from app.utils.pdf_processor import PDFProcessor
+from app.core.knowledge_graph import KnowledgeGraphExtractor
 
 class PaperAnalyzer:
     """
@@ -16,6 +17,7 @@ class PaperAnalyzer:
     def __init__(self):
         self.llm_client = GroqAIClient()
         self.prompt_templates = PromptTemplates()
+        self.graph_extractor = KnowledgeGraphExtractor(self.llm_client)
     
     async def save_upload_file(self, file_content: bytes) -> str:
         """
@@ -83,6 +85,10 @@ class PaperAnalyzer:
             pseudocode_task = self._generate_pseudo_code(paper_text, shared_context)
             pseudocode_result = await pseudocode_task
             
+            # Fifth call - extract knowledge graph
+            knowledge_graph_task = self._extract_knowledge_graph(paper_text, shared_context)
+            knowledge_graph_result = await knowledge_graph_task
+            
             final_result = {
                 "metadata": {
                     "title": title or "Unknown Title",
@@ -91,7 +97,8 @@ class PaperAnalyzer:
                 "key_concepts": shared_context.get("key_concepts", {}),
                 "problem_statement": shared_context.get("problem_statement", {}),
                 "full_explanation": shared_context.get("full_explanation", {}),
-                "pseudo_code": pseudocode_result or {}
+                "pseudo_code": pseudocode_result or {},
+                "knowledge_graph": knowledge_graph_result or {"nodes": [], "edges": []}
             }
             
             return final_result
@@ -160,3 +167,24 @@ class PaperAnalyzer:
         """
         messages = PromptTemplates.pseudo_code_prompt(paper_text, shared_context)
         return await self.llm_client.call_llm(messages)
+        
+    async def _extract_knowledge_graph(self, paper_text: str, shared_context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract a knowledge graph representing key concepts and their relationships.
+        
+        Args:
+            paper_text: The text content of the paper
+            shared_context: Shared context from other calls
+            
+        Returns:
+            Dictionary containing nodes and edges for the knowledge graph
+        """
+        # Prepare a complete analysis result by combining shared context elements
+        analysis_result = {
+            "concepts": shared_context.get("key_concepts", {}),
+            "problem": shared_context.get("problem_statement", {}),
+            "explanation": shared_context.get("full_explanation", {})
+        }
+        
+        # Extract knowledge graph data
+        return await self.graph_extractor.extract_graph_data(paper_text, analysis_result)
