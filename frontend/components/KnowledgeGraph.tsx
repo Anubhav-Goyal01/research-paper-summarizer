@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-// 3D import temporarily disabled due to compatibility issues
 // import ForceGraph3D from 'react-force-graph-3d';
 import * as d3 from 'd3';
 import { ResizableBox } from 'react-resizable';
@@ -40,20 +39,24 @@ interface KnowledgeGraphProps {
 }
 
 const NODE_COLORS = {
-  concept: '#4285F4',  // Blue
-  method: '#EA4335',   // Red
-  dataset: '#FBBC05',  // Yellow
-  result: '#34A853',   // Green
-  entity: '#9C27B0',   // Purple
-  default: '#757575'   // Gray
+  concept: '#4285F4',    // Blue
+  method: '#EA4335',     // Red
+  dataset: '#FBBC05',    // Yellow
+  result: '#34A853',     // Green
+  entity: '#9C27B0',     // Purple
+  limitation: '#FF5722', // Deep Orange
+  application: '#00BCD4',// Cyan
+  default: '#757575'     // Gray
 };
 
 const NODE_SIZES = {
   concept: 8,
-  method: 6,
+  method: 7,
   dataset: 6,
-  result: 4,
-  entity: 4,
+  result: 6,
+  entity: 5,
+  limitation: 5,
+  application: 7,
   default: 4
 };
 
@@ -91,7 +94,6 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     };
   }, []);
   
-  // Transform data for visualization
   useEffect(() => {
     if (!graphData || !graphData.nodes || !graphData.edges) {
       setTransformedData({ nodes: [], links: [] });
@@ -124,7 +126,6 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     }
   }, [graphData]);
   
-  // Apply filtering based on search and node type filters
   const filteredData = React.useMemo(() => {
     const { nodes, links } = transformedData;
     
@@ -150,25 +151,11 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   
   // Handle node click
   const handleNodeClick = useCallback((node: any) => {
+    // Only update selected node state without moving the graph
     setSelectedNode(node === selectedNode ? null : node);
     
-    // Focus camera on node
-    if (graphRef.current && node !== selectedNode) {
-      const distance = 40;
-      const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z || 0);
-      
-      if (use3D) {
-        graphRef.current.cameraPosition(
-          { x: node.x * distRatio, y: node.y * distRatio, z: (node.z || 0) * distRatio },
-          node,
-          2000
-        );
-      } else {
-        graphRef.current.centerAt(node.x, node.y, 1000);
-        graphRef.current.zoom(2, 1000);
-      }
-    }
-  }, [selectedNode, use3D]);
+    // No camera movement or repositioning - this keeps the graph completely static
+  }, [selectedNode]);
   
   // Handle node hover
   const handleNodeHover = useCallback((node: any) => {
@@ -344,7 +331,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
         )}
           
           {/* Graph */}
-          <div className="w-full h-full">
+          <div className="w-full" style={{ height: '600px', position: 'relative', overflow: 'hidden', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
             {use3D ? (
               // 3D graph temporarily disabled
               <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
@@ -360,22 +347,24 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                 </div>
               </div>
             ) : (
-              <ForceGraph2D
-                ref={graphRef}
-                graphData={filteredData}
-                nodeLabel="label"
-                nodeColor="color"
-                nodeVal="val"
-                linkColor={() => "#aaaaaa"}
-                linkWidth={0.5}
-                linkDirectionalParticles={2}
-                linkDirectionalParticleWidth={1.2}
-                onNodeClick={handleNodeClick}
-                onNodeHover={handleNodeHover}
-                linkCurvature={0.1}
-                cooldownTicks={100}
-                cooldownTime={2000}
-              />
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                <ForceGraph2D
+                  ref={graphRef}
+                  graphData={filteredData}
+                  nodeLabel="label"
+                  nodeColor="color"
+                  nodeVal="val"
+                  linkColor={() => "#aaaaaa"}
+                  linkWidth={0.5}
+                  linkDirectionalParticles={2}
+                  linkDirectionalParticleWidth={1.2}
+                  onNodeClick={handleNodeClick}
+                  onNodeHover={handleNodeHover}
+                  linkCurvature={0.1}
+                  cooldownTicks={100}
+                  cooldownTime={2000}
+                />
+              </div>
             )}
           </div>
         </>

@@ -39,7 +39,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ jobId }) => {
 
   const fetchChatHistory = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/chat`);
+      const response = await fetch(`http://localhost:8001/api/jobs/${jobId}/chat`);
       
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
@@ -68,7 +68,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ jobId }) => {
     setChatHistory(prev => [...prev, tempChat]);
     
     try {
-      const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/chat`, {
+      const response = await fetch(`http://localhost:8001/api/jobs/${jobId}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

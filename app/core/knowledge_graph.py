@@ -85,23 +85,49 @@ class KnowledgeGraphExtractor:
         methodology = str(explanation.get("methodology", ""))
         
         prompt = f"""
-        Extract a knowledge graph from this research paper. 
+        Extract a detailed and comprehensive knowledge graph from this research paper that reveals the paper's core contributions and how concepts interconnect.
         
-        I'll provide you with the paper text and concepts we've already identified. Create a graph with:
-        1. Nodes representing key concepts, methods, datasets, and results
-        2. Edges representing relationships between these nodes
+        I'll provide you with the paper text and concepts we've already identified. Your task is to create an in-depth graph that captures the paper's intellectual framework.
         
         ALREADY IDENTIFIED INFORMATION:
         - Key concepts: {", ".join(key_concepts)}
         - Technologies: {", ".join(technologies)}
         - Problem statement: {problem_statement[:200]}...
         - Alternative approaches: {", ".join(approaches[:3])}
+        - Methodology: {methodology[:200]}...
         
         INSTRUCTIONS:
-        1. Create 15-25 nodes representing the most important concepts
-        2. Create 20-40 edges showing relationships between nodes
-        3. Use the following node types: "concept", "method", "dataset", "result", "entity"
-        4. Use the following relationship types: "uses", "improves", "contradicts", "part_of", "results_in", "depends_on", "applied_to", "evaluated_on"
+        1. Create 25-40 nodes representing the following:
+           - Core theoretical concepts and their foundations
+           - Specific techniques, methods, and algorithms
+           - Datasets, benchmarks, and evaluation metrics
+           - Results, findings, and implications
+           - Limitations, challenges, and future directions
+           - Related work and competing approaches
+        
+        2. Create 40-70 edges showing detailed relationships between nodes
+        
+        3. Node types (use these exact types):
+           - "concept": Theoretical ideas, principles, or frameworks
+           - "method": Specific techniques, algorithms, or approaches
+           - "dataset": Data sources, benchmarks, or test environments
+           - "result": Findings, outcomes, or performance metrics
+           - "entity": People, organizations, or systems mentioned
+           - "limitation": Constraints, issues, or shortcomings identified
+           - "application": Practical uses or implementations
+        
+        4. Relationship types (use these exact types):
+           - "uses": One concept/method utilizes another
+           - "improves": Enhances or builds upon previous work
+           - "contradicts": Challenges or refutes another concept
+           - "part_of": Represents a component relationship
+           - "results_in": Produces a specific outcome
+           - "depends_on": Requires another concept/method
+           - "applied_to": Implemented in a specific context
+           - "evaluated_on": Tested against a particular benchmark
+           - "addresses": Attempts to solve a specific problem
+           - "compared_with": Contrasted against another approach
+           - "leads_to": Insights or directions for future work
         
         OUTPUT FORMAT:
         Return a JSON object with this exact structure:

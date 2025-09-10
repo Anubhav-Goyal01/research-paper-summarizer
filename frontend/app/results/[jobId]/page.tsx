@@ -27,7 +27,7 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
     
     const fetchData = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/status/${jobId}`);
+        const response = await fetch(`http://localhost:8001/api/status/${jobId}`);
         
         if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
