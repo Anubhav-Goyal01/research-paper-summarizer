@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 from app.core.paper_analyzer import PaperAnalyzer
 from app.core.chat_manager import ChatManager
-from app.clients.groq_ai import GroqAIClient
+from app.clients.gemini_ai import GeminiClient
 from app.models.schemas import ErrorResponse, ChatRequest
 
 router = APIRouter()
@@ -161,7 +161,7 @@ async def chat_with_paper(job_id: str, chat_request: ChatRequest):
     if "chat_history" not in job_info:
         job_info["chat_history"] = []
     
-    chat_manager = ChatManager(GroqAIClient())
+    chat_manager = ChatManager(GeminiClient())
     
     try:
         chat_result = await chat_manager.process_chat_message(

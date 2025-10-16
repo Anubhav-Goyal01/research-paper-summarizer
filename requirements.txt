@@ -8,3 +8,4 @@ langchain
 langchain-community
 python-dotenv
 typing-extensions
+google-genai==1.17.0

@@ -4,7 +4,7 @@ import os
 import tempfile
 from typing import Dict, List, Any, Optional
 
-from app.clients.groq_ai import GroqAIClient
+from app.clients.gemini_ai import GeminiClient
 from app.prompts.templates import PromptTemplates
 from app.utils.pdf_processor import PDFProcessor
 from app.core.knowledge_graph import KnowledgeGraphExtractor
@@ -15,7 +15,7 @@ class PaperAnalyzer:
     """
     
     def __init__(self):
-        self.llm_client = GroqAIClient()
+        self.llm_client = GeminiClient()
         self.prompt_templates = PromptTemplates()
         self.graph_extractor = KnowledgeGraphExtractor(self.llm_client)
     

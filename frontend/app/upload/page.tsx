@@ -25,7 +25,7 @@ export default function UploadPage() {
     
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch('http://localhost:8001/api/analyze', {
+    const response = await fetch('http://localhost:8002/api/analyze', {
       method: 'POST',
       body: formData,
     });
