@@ -16,9 +16,9 @@ class Settings:
             self.GEMINI_FALLBACK_MODEL: str = os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-2.5-pro")
             
             # Model Configuration
-            self.MAX_TOKENS: int = int(os.environ.get("MAX_TOKENS", "35000"))
+            self.MAX_TOKENS: int = int(os.environ.get("MAX_TOKENS", "50000"))
             self.TEMPERATURE: float = float(os.environ.get("TEMPERATURE", "0.2"))
-            self.THINKING_BUDGET: int = int(os.environ.get("THINKING_BUDGET", "10000"))
+            self.THINKING_BUDGET: int = int(os.environ.get("THINKING_BUDGET", "15000"))
             
             # Feature Flags
             self.USE_GROUNDING: bool = os.environ.get("USE_GROUNDING", "true").lower() == "true"

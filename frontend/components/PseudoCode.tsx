@@ -70,9 +70,20 @@ export default function PseudoCode({ data }: PseudoCodeProps) {
 
         <div className="border-t border-neutral-200 pt-4">
           <h4 className="font-medium text-neutral-800 mb-2">Potential Challenges</h4>
-          <ul className="list-disc pl-5 space-y-1 text-sm text-neutral-700">
-            {data.potential_challenges.map((challenge: string, index: number) => (
-              <li key={index}>{challenge}</li>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-neutral-700">
+            {data.potential_challenges.map((item: any, index: number) => (
+              <li key={index}>
+                {typeof item === 'string' ? (
+                  item
+                ) : (
+                  <>
+                    <span className="font-medium">{item.challenge}</span>
+                    {item.description && (
+                      <span className="text-neutral-600"> - {item.description}</span>
+                    )}
+                  </>
+                )}
+              </li>
             ))}
           </ul>
         </div>
