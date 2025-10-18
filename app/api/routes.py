@@ -9,10 +9,15 @@ from app.core.paper_analyzer import PaperAnalyzer
 from app.core.chat_manager import ChatManager
 from app.clients.gemini_ai import GeminiClient
 from app.models.schemas import ErrorResponse, ChatRequest
+from app.storage.json_storage import JSONStorage
 
 router = APIRouter()
 
+# In-memory cache for active processing jobs
 analysis_cache: Dict[str, Dict[str, Any]] = {}
+
+# Initialize JSON storage
+json_storage = JSONStorage()
 
 @router.post("/analyze", 
              response_model=Dict[str, Any],
@@ -55,6 +60,17 @@ async def analyze_paper(
             analysis_cache[job_id]["status"] = "completed"
             analysis_cache[job_id]["result"] = result
             
+            # Save to JSON storage when all 5 calls succeed
+            try:
+                save_data = {
+                    "filename": filename,
+                    "result": result
+                }
+                json_storage.save_paper_analysis(job_id, save_data)
+                logging.info(f"Successfully saved analysis to JSON for job: {job_id}")
+            except Exception as save_error:
+                logging.error(f"Failed to save analysis to JSON: {str(save_error)}")
+            
         except Exception as e:
             logging.error(f"Error processing paper: {str(e)}")
             analysis_cache[job_id]["status"] = "failed"
@@ -73,32 +89,54 @@ async def get_job_status(job_id: str):
     """
     Check the status of a paper analysis job.
     If the job is complete, returns the analysis results.
+    Loads from JSON storage if not in memory cache.
     """
-    if job_id not in analysis_cache:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Job ID {job_id} not found"
-        )
+    # Check in-memory cache first
+    if job_id in analysis_cache:
+        job_info = analysis_cache[job_id]
+        
+        if job_info["status"] == "completed":
+            return {
+                "status": "completed",
+                "filename": job_info["filename"],
+                "result": job_info["result"]
+            }
+        elif job_info["status"] == "failed":
+            return {
+                "status": "failed",
+                "filename": job_info["filename"],
+                "error": job_info.get("error", "Unknown error")
+            }
+        else:
+            return {
+                "status": "processing",
+                "filename": job_info["filename"]
+            }
     
-    job_info = analysis_cache[job_id]
+    # If not in cache, try loading from JSON storage
+    try:
+        stored_data = json_storage.load_paper_analysis(job_id)
+        if stored_data:
+            # Load into cache for future requests
+            analysis_cache[job_id] = {
+                "status": stored_data.get("status", "completed"),
+                "filename": stored_data.get("filename", "Unknown"),
+                "result": stored_data.get("result", {})
+            }
+            
+            return {
+                "status": "completed",
+                "filename": stored_data.get("filename", "Unknown"),
+                "result": stored_data.get("result", {})
+            }
+    except Exception as e:
+        logging.error(f"Error loading from JSON storage: {str(e)}")
     
-    if job_info["status"] == "completed":
-        return {
-            "status": "completed",
-            "filename": job_info["filename"],
-            "result": job_info["result"]
-        }
-    elif job_info["status"] == "failed":
-        return {
-            "status": "failed",
-            "filename": job_info["filename"],
-            "error": job_info.get("error", "Unknown error")
-        }
-    else:
-        return {
-            "status": "processing",
-            "filename": job_info["filename"]
-        }
+    # Not found in cache or storage
+    raise HTTPException(
+        status_code=404,
+        detail=f"Job ID {job_id} not found"
+    )
 
 @router.delete("/jobs/{job_id}", 
                responses={
@@ -107,15 +145,32 @@ async def get_job_status(job_id: str):
                })
 async def delete_job(job_id: str):
     """
-    Delete a job and its results from the cache.
+    Delete a job and its results from the cache and JSON storage.
     """
-    if job_id not in analysis_cache:
+    found = False
+    
+    # Delete from memory cache
+    if job_id in analysis_cache:
+        try:
+            del analysis_cache[job_id]
+            found = True
+        except Exception as e:
+            logging.error(f"Error deleting from cache: {str(e)}")
+    
+    # Delete from JSON storage
+    try:
+        if json_storage.paper_exists(job_id):
+            json_storage.delete_paper_analysis(job_id)
+            json_storage.delete_chat_history(job_id)
+            found = True
+    except Exception as e:
+        logging.error(f"Error deleting from JSON storage: {str(e)}")
+    
+    if not found:
         raise HTTPException(
             status_code=404,
             detail=f"Job ID {job_id} not found"
         )
-    
-    del analysis_cache[job_id]
     
     return {"message": f"Job {job_id} deleted successfully"}
 
@@ -130,6 +185,7 @@ async def delete_job(job_id: str):
 async def chat_with_paper(job_id: str, chat_request: ChatRequest):
     """
     Chat with an AI about a previously analyzed paper.
+    Loads from JSON storage if not in memory cache.
     
     Args:
         job_id: The ID of the analysis job
@@ -138,13 +194,32 @@ async def chat_with_paper(job_id: str, chat_request: ChatRequest):
     Returns:
         Dictionary containing the response and updated chat history
     """
-    if job_id not in analysis_cache:
+    job_info = None
+    
+    # Check in-memory cache first
+    if job_id in analysis_cache:
+        job_info = analysis_cache[job_id]
+    else:
+        # Try loading from JSON storage
+        try:
+            stored_data = json_storage.load_paper_analysis(job_id)
+            if stored_data:
+                job_info = {
+                    "status": stored_data.get("status", "completed"),
+                    "filename": stored_data.get("filename", "Unknown"),
+                    "result": stored_data.get("result", {}),
+                    "chat_history": json_storage.load_chat_history(job_id)
+                }
+                # Load into cache
+                analysis_cache[job_id] = job_info
+        except Exception as e:
+            logging.error(f"Error loading from JSON storage: {str(e)}")
+    
+    if not job_info:
         raise HTTPException(
             status_code=404,
             detail=f"Job ID {job_id} not found"
         )
-    
-    job_info = analysis_cache[job_id]
     
     if job_info["status"] != "completed":
         raise HTTPException(
@@ -173,6 +248,13 @@ async def chat_with_paper(job_id: str, chat_request: ChatRequest):
         
         job_info["chat_history"] = chat_result["updated_history"]
         
+        # Save chat history to JSON storage
+        try:
+            json_storage.save_chat_history(job_id, chat_result["updated_history"])
+            logging.info(f"Successfully saved chat history to JSON for job: {job_id}")
+        except Exception as save_error:
+            logging.error(f"Failed to save chat history to JSON: {str(save_error)}")
+        
         return {
             "response": chat_result["response"],
             "job_id": job_id
@@ -194,6 +276,7 @@ async def chat_with_paper(job_id: str, chat_request: ChatRequest):
 async def get_chat_history(job_id: str):
     """
     Get the chat history for a specific job.
+    Loads from JSON storage if not in memory cache.
     
     Args:
         job_id: The ID of the analysis job
@@ -201,15 +284,30 @@ async def get_chat_history(job_id: str):
     Returns:
         Dictionary containing the chat history
     """
-    if job_id not in analysis_cache:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Job ID {job_id} not found"
-        )
+    chat_history = []
     
-    job_info = analysis_cache[job_id]
-    
-    chat_history = job_info.get("chat_history", [])
+    # Check in-memory cache first
+    if job_id in analysis_cache:
+        job_info = analysis_cache[job_id]
+        chat_history = job_info.get("chat_history", [])
+    else:
+        # Try loading from JSON storage
+        try:
+            if json_storage.paper_exists(job_id):
+                chat_history = json_storage.load_chat_history(job_id)
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Job ID {job_id} not found"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"Error loading chat history from JSON storage: {str(e)}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Job ID {job_id} not found"
+            )
     
     return {
         "job_id": job_id,
