@@ -284,14 +284,14 @@ Format your response as a JSON object with the following structure:
     {{
       "component_name": "Name of the architectural component or stage",
       "purpose": "What this component is designed to achieve",
-      "detailed_explanation": "Extremely detailed explanation covering math, dimensions, operations, design rationale",
-      "mathematical_formulation": "Key equations or mathematical operations (if applicable)",
-      "dimension_analysis": "Input/output dimensions, shape transformations, tensor operations",
+      "detailed_explanation": "Extremely detailed explanation covering math, dimensions, operations, design rationale. Use $...$ for inline math and $$...$$ for display equations in LaTeX format.",
+      "mathematical_formulation": "Key equations or mathematical operations. IMPORTANT: Use proper LaTeX format with $...$ for inline math (e.g., $x^2 + y^2$) and $$...$$ for display equations. Variables like vectors/matrices should be in LaTeX, e.g., $W_{{conv}}$, $\\\\sigma(x)$, $h_{{k,j}}$. Use \\\\text{{}} for text in equations.",
+      "dimension_analysis": "Input/output dimensions, shape transformations, tensor operations. Use LaTeX for mathematical notation.",
       "design_rationale": "Why this design? What problem does it solve? What alternatives were considered?",
       "subtle_details": "Critical but often overlooked implementation details"
     }}
   ],
-  "integration_flow": "How all components work together end-to-end, with specific attention to how information flows and transforms",
+  "integration_flow": "How all components work together end-to-end, with specific attention to how information flows and transforms. Use LaTeX for any mathematical notation.",
   "critical_insights": ["Key insights about why this architecture works well for the problem"],
   "implementation_considerations": ["Important details for anyone implementing this system"]
 }}"""}

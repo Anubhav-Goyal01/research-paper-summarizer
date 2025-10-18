@@ -2,9 +2,46 @@ import React, { useState } from 'react';
 import { Card } from './Card';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface ArchitectureDeepDiveProps {
   data: any;
+}
+
+// Helper function to convert backtick math notation to LaTeX
+const convertBackticksToLatex = (text: string): string => {
+  if (!text) return text;
+  
+  // Convert backtick-wrapped content that looks like math to LaTeX inline math
+  // Pattern: `variable_name` or `equation = something`
+  return text.replace(/`([^`]+)`/g, (match, content) => {
+    // Check if it looks like math (contains =, +, -, *, /, ^, subscripts, Greek letters, etc.)
+    if (/[=+\-*/^_{}∑∏∫σΣΠΘΦλμτ()[\]→←]/.test(content)) {
+      // Replace _ with proper LaTeX subscript syntax if not already escaped
+      let latexContent = content;
+      
+      // Handle arrow notation for directional variables (e.g., →h_k,j or ←h_k,j)
+      // Convert to proper LaTeX with overrightarrow
+      latexContent = latexContent.replace(/→([A-Za-z])/g, '\\overrightarrow{$1}');
+      latexContent = latexContent.replace(/←([A-Za-z])/g, '\\overleftarrow{$1}');
+      
+      // General replacements
+      latexContent = latexContent
+        .replace(/([A-Za-z]+)_([A-Za-z0-9,{}]+)/g, '$1_{$2}')  // subscripts
+        .replace(/\*/g, ' \\cdot ')  // multiplication
+        .replace(/⊙/g, ' \\odot ')  // element-wise multiplication
+        .replace(/σ/g, '\\sigma')  // Greek letters
+        .replace(/Σ/g, '\\Sigma')
+        .replace(/→/g, ' \\rightarrow ')  // standalone arrows with spaces
+        .replace(/←/g, ' \\leftarrow ');
+      
+      return `$${latexContent}$`;
+    }
+    // If it doesn't look like math, keep the code formatting
+    return match;
+  });
 }
 
 export default function ArchitectureDeepDive({ data }: ArchitectureDeepDiveProps) {
@@ -74,8 +111,11 @@ export default function ArchitectureDeepDive({ data }: ArchitectureDeepDiveProps
                     Detailed Explanation
                   </h5>
                   <div className="text-sm text-neutral-700 leading-relaxed prose prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {component.detailed_explanation}
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    >
+                      {convertBackticksToLatex(component.detailed_explanation)}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -89,8 +129,11 @@ export default function ArchitectureDeepDive({ data }: ArchitectureDeepDiveProps
                     Mathematical Formulation
                   </h5>
                   <div className="text-sm text-indigo-900 leading-relaxed prose prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {component.mathematical_formulation}
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    >
+                      {convertBackticksToLatex(component.mathematical_formulation)}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -104,8 +147,11 @@ export default function ArchitectureDeepDive({ data }: ArchitectureDeepDiveProps
                     Dimension Analysis
                   </h5>
                   <div className="text-sm text-blue-900 leading-relaxed prose prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {component.dimension_analysis}
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    >
+                      {convertBackticksToLatex(component.dimension_analysis)}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -119,7 +165,10 @@ export default function ArchitectureDeepDive({ data }: ArchitectureDeepDiveProps
                     Design Rationale
                   </h5>
                   <div className="text-sm text-green-900 leading-relaxed prose prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    >
                       {component.design_rationale}
                     </ReactMarkdown>
                   </div>
@@ -134,7 +183,10 @@ export default function ArchitectureDeepDive({ data }: ArchitectureDeepDiveProps
                     Critical Implementation Details
                   </h5>
                   <div className="text-sm text-amber-900 leading-relaxed prose prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    >
                       {component.subtle_details}
                     </ReactMarkdown>
                   </div>
@@ -153,8 +205,11 @@ export default function ArchitectureDeepDive({ data }: ArchitectureDeepDiveProps
                 End-to-End Integration Flow
               </h4>
               <div className="text-sm text-purple-900 leading-relaxed prose prose-sm max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {data.integration_flow}
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
+                  {convertBackticksToLatex(data.integration_flow)}
                 </ReactMarkdown>
               </div>
             </div>

@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card } from './Card';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 interface ModelFileProps {
   code: string;
@@ -32,18 +34,36 @@ export default function ModelFile({ code }: ModelFileProps) {
 
   return (
     <Card title="Model File (model.py)">
-      <div className="mb-3 flex justify-end">
+      <div className="mb-4 flex justify-between items-center">
+        <p className="text-sm text-neutral-600">
+          Complete PyTorch implementation with dimension comments
+        </p>
         <button
           onClick={handleDownload}
-          className="px-3 py-1.5 bg-primary-600 text-white text-sm rounded hover:bg-primary-700"
+          className="px-3 py-1.5 bg-primary-600 text-white text-sm rounded hover:bg-primary-700 transition-colors"
         >
-          Download model.py
+          📥 Download model.py
         </button>
       </div>
-      <div className="rounded-md bg-neutral-900 overflow-hidden">
-        <pre className="p-4 overflow-x-auto">
-{code}
-        </pre>
+      <div className="rounded-lg overflow-hidden border border-neutral-200">
+        <SyntaxHighlighter
+          language="python"
+          style={vscDarkPlus}
+          showLineNumbers
+          customStyle={{
+            margin: 0,
+            borderRadius: '0.5rem',
+            fontSize: '0.875rem',
+            lineHeight: '1.5',
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: 'Menlo, Monaco, Consolas, "Courier New", monospace',
+            }
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
       </div>
     </Card>
   );
