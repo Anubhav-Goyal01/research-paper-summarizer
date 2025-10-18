@@ -332,7 +332,7 @@ Generate a complete Python model.py file that implements the paper's architectur
 Requirements:
 - Use PyTorch (torch, torch.nn as nn, torch.nn.functional as F) unless otherwise specified
 - No runtime assumptions; expose unknowns as constructor args with docstrings
-- At every transformation, include comments with exact tensor dimensions, e.g. `# [batch, seq_len, 512] -> [batch, seq_len, 1024]`
+- At every transformation, include comments with exact tensor dimensions, e.g. `# [batch, seq_len, 512] -> [batch, seq_len, 1024] and then a real example [1, 10, 512] -> [1, 10, 1024]`
 - Include a top-level docstring summarizing the model and expected input shapes
 - Include a small `if __name__ == "__main__":` smoke test that instantiates the model and runs forward pass
 - Do not include training loops; focus on architecture only
