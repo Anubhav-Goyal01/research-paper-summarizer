@@ -3,14 +3,17 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Card } from '../../../components/Card';
 import KeyConcepts from '../../../components/KeyConcepts';
 import ProblemStatement from '../../../components/ProblemStatement';
 import FullExplanation from '../../../components/FullExplanation';
 import PseudoCode from '../../../components/PseudoCode';
+import ArchitectureDeepDive from '../../../components/ArchitectureDeepDive';
+import ModelFile from '../../../components/ModelFile';
+const KnowledgeGraph = dynamic(() => import('../../../components/KnowledgeGraph'), { ssr: false });
 import { Loader } from '../../../components/Loader';
 import ChatPanel from '../../../components/ChatPanel';
-import KnowledgeGraph from '../../../components/KnowledgeGraph';
 
 export default function ResultsPage({ params }: { params: { jobId: string } }) {
   const { jobId } = params;
@@ -135,7 +138,7 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
     );
   }
 
-  const { metadata, key_concepts, problem_statement, full_explanation, pseudo_code, knowledge_graph } = data.result;
+  const { metadata, key_concepts, problem_statement, full_explanation, pseudo_code, knowledge_graph, architecture_deep_dive, model_file } = data.result;
   
   return (
     <main className="min-h-screen flex flex-col">
@@ -180,6 +183,18 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
               >
                 Implementation
               </button>
+              <button
+                onClick={() => setActiveTab('architecture-deep-dive')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'architecture-deep-dive' ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'}`}
+              >
+                Architecture Deep Dive
+              </button>
+              <button
+                onClick={() => setActiveTab('model-file')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'model-file' ? 'border-primary-500 text-primary-600' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'}`}
+              >
+                Model File
+              </button>
             </nav>
           </div>
         </div>
@@ -218,6 +233,18 @@ export default function ResultsPage({ params }: { params: { jobId: string } }) {
         {activeTab === 'implementation' && (
           <div className="mb-8">
             <PseudoCode data={pseudo_code} />
+          </div>
+        )}
+        
+        {activeTab === 'architecture-deep-dive' && (
+          <div className="mb-8">
+            <ArchitectureDeepDive data={architecture_deep_dive} />
+          </div>
+        )}
+
+        {activeTab === 'model-file' && (
+          <div className="mb-8">
+            <ModelFile code={typeof model_file === 'string' ? model_file : (model_file?.code || '')} />
           </div>
         )}
       </div>
