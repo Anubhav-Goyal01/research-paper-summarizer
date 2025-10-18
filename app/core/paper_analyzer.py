@@ -85,9 +85,18 @@ class PaperAnalyzer:
             pseudocode_task = self._generate_pseudo_code(paper_text, shared_context)
             pseudocode_result = await pseudocode_task
             
-            # Fifth call - extract knowledge graph
-            knowledge_graph_task = self._extract_knowledge_graph(paper_text, shared_context)
-            knowledge_graph_result = await knowledge_graph_task
+            # Fifth call - extract knowledge graph (disabled)
+            # knowledge_graph_task = self._extract_knowledge_graph(paper_text, shared_context)
+            # knowledge_graph_result = await knowledge_graph_task
+            knowledge_graph_result = {"nodes": [], "edges": []}
+            
+            # Sixth call - in-depth architecture analysis
+            architecture_deep_dive_task = self._analyze_architecture_deep_dive(paper_text, shared_context)
+            architecture_deep_dive_result = await architecture_deep_dive_task
+            
+            # Seventh call - generate concrete model.py file code
+            model_file_task = self._generate_model_file(paper_text, shared_context)
+            model_file_result = await model_file_task
             
             final_result = {
                 "metadata": {
@@ -98,7 +107,9 @@ class PaperAnalyzer:
                 "problem_statement": shared_context.get("problem_statement", {}),
                 "full_explanation": shared_context.get("full_explanation", {}),
                 "pseudo_code": pseudocode_result or {},
-                "knowledge_graph": knowledge_graph_result or {"nodes": [], "edges": []}
+                "knowledge_graph": knowledge_graph_result or {"nodes": [], "edges": []},
+                "architecture_deep_dive": architecture_deep_dive_result or {},
+                "model_file": model_file_result or ""
             }
             
             return final_result
@@ -179,12 +190,77 @@ class PaperAnalyzer:
         Returns:
             Dictionary containing nodes and edges for the knowledge graph
         """
-        # Prepare a complete analysis result by combining shared context elements
-        analysis_result = {
-            "concepts": shared_context.get("key_concepts", {}),
-            "problem": shared_context.get("problem_statement", {}),
-            "explanation": shared_context.get("full_explanation", {})
-        }
+        try:
+            # Prepare a complete analysis result by combining shared context elements
+            analysis_result = {
+                "concepts": shared_context.get("key_concepts", {}),
+                "problem": shared_context.get("problem_statement", {}),
+                "explanation": shared_context.get("full_explanation", {})
+            }
+            
+            # Extract knowledge graph data
+            return await self.graph_extractor.extract_graph_data(paper_text, analysis_result)
+        except Exception as e:
+            logging.error(f"Error extracting knowledge graph: {str(e)}")
+            return {"nodes": [], "edges": []}
+    
+    async def _analyze_architecture_deep_dive(self, paper_text: str, shared_context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Make LLM call to generate an extremely detailed, in-depth analysis of the architecture.
+        This picks apart every mathematical detail, dimension, and design decision.
         
-        # Extract knowledge graph data
-        return await self.graph_extractor.extract_graph_data(paper_text, analysis_result)
+        Args:
+            paper_text: The text content of the paper
+            shared_context: Shared context from other calls including full_explanation
+            
+        Returns:
+            Dictionary containing detailed architecture breakdown
+        """
+        try:
+            messages = PromptTemplates.architecture_deep_dive_prompt(paper_text, shared_context)
+            return await self.llm_client.call_llm(messages)
+        except Exception as e:
+            logging.error(f"Error analyzing architecture deep dive: {str(e)}")
+            return {}
+
+    async def _generate_model_file(self, paper_text: str, shared_context: Dict[str, Any]) -> str:
+        """
+        Make LLM call to generate a complete model.py file in Python representing the architecture.
+        The code must include explicit tensor dimensions in comments at each step.
+        
+        Args:
+            paper_text: The text content of the paper
+            shared_context: Shared context from prior calls including pseudo_code and architecture_deep_dive
+            
+        Returns:
+            String containing Python code for model.py
+        """
+        try:
+            # Get the architecture deep dive if available, otherwise use full_explanation
+            arch_context = shared_context.get("architecture_deep_dive")
+            if not arch_context:
+                arch_context = shared_context.get("full_explanation", {})
+            
+            messages = PromptTemplates.model_file_prompt(paper_text, {
+                "pseudo_code": shared_context.get("pseudo_code", {}),
+                "architecture_deep_dive": arch_context
+            })
+            
+            result = await self.llm_client.call_llm(messages)
+            
+            # Extract code from the result
+            if isinstance(result, dict):
+                code = result.get("code", "")
+                if code:
+                    return code
+                # Try alternative keys
+                code = result.get("model_py", "") or result.get("model_code", "")
+                return code
+            elif isinstance(result, str):
+                return result
+            else:
+                logging.warning(f"Unexpected result type for model file: {type(result)}")
+                return ""
+        except Exception as e:
+            logging.error(f"Error generating model file: {str(e)}")
+            return ""

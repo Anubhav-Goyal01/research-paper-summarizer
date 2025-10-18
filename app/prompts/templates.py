@@ -216,6 +216,134 @@ Format your response as a JSON object with the following structure:
         ]
 
     @staticmethod
+    def architecture_deep_dive_prompt(paper_content: str, other_contexts: Dict[str, Any] = None) -> List[Dict[str, str]]:
+        """
+        Create a prompt for an extremely detailed, in-depth analysis of the architecture and methodology.
+        This prompt picks apart every detail, mathematical formulation, dimension, and design decision.
+        
+        Args:
+            paper_content: The text content of the research paper
+            other_contexts: Context from previous analysis including architecture description
+            
+        Returns:
+            List of message dictionaries for the LLM
+        """
+        architecture = ""
+        methodology = ""
+        innovations = []
+        
+        if other_contexts and "full_explanation" in other_contexts:
+            full_exp = other_contexts["full_explanation"]
+            architecture = full_exp.get("architecture", "")
+            methodology = full_exp.get("methodology", "")
+            innovations = full_exp.get("innovations", [])
+        
+        return [
+            {"role": "system", "content": """You are an exceptionally detail-oriented academic researcher and AI architect with deep expertise in dissecting complex technical systems.
+
+Your task is to provide an EXTREMELY DETAILED, bone-deep analysis of the paper's architecture and methodology. Go far beyond surface-level descriptions.
+
+For every component, explain:
+- The exact mathematical formulations and operations
+- The precise dimensions and shapes at each step
+- Why specific design decisions were made
+- How information flows through the system
+- The computational complexity and efficiency considerations
+- The intuition behind architectural choices
+- How different components interact and affect each other
+
+Think of this as teaching someone who wants to implement this from scratch with complete understanding of every detail."""},
+            {"role": "user", "content": f"""Based on the research paper below, provide an exhaustive, meticulous breakdown of the architecture and methodology.
+
+**Previously Identified Architecture:**
+{architecture}
+
+**Previously Identified Methodology:**
+{methodology}
+
+**Key Innovations:**
+{', '.join(innovations) if innovations else 'See paper content'}
+
+Now, I need you to go MUCH deeper. For each major component of the architecture:
+
+1. **Break down the mathematical operations** - What exact transformations happen? What are the equations?
+2. **Explain dimensions at every step** - If data flows through layers, what are the input/output dimensions? How do shapes change?
+3. **Detail the internal mechanisms** - For neural network layers, explain what happens internally. For algorithms, break down each step.
+4. **Explain design rationale** - WHY was this component designed this way? What alternatives exist and why weren't they chosen?
+5. **Trace information flow** - How does data transform as it moves through the system? What information is preserved or lost?
+6. **Identify subtle but critical details** - Normalization techniques, activation functions, initialization strategies, gating mechanisms, attention patterns, etc.
+7. **Connect to the problem** - How does each architectural choice address the specific challenges identified in the paper?
+
+Research Paper Content:
+{paper_content[:15000]}
+
+Format your response as a JSON object with the following structure:
+{{
+  "overview": "A brief summary of what you'll explain",
+  "detailed_breakdown": [
+    {{
+      "component_name": "Name of the architectural component or stage",
+      "purpose": "What this component is designed to achieve",
+      "detailed_explanation": "Extremely detailed explanation covering math, dimensions, operations, design rationale",
+      "mathematical_formulation": "Key equations or mathematical operations (if applicable)",
+      "dimension_analysis": "Input/output dimensions, shape transformations, tensor operations",
+      "design_rationale": "Why this design? What problem does it solve? What alternatives were considered?",
+      "subtle_details": "Critical but often overlooked implementation details"
+    }}
+  ],
+  "integration_flow": "How all components work together end-to-end, with specific attention to how information flows and transforms",
+  "critical_insights": ["Key insights about why this architecture works well for the problem"],
+  "implementation_considerations": ["Important details for anyone implementing this system"]
+}}"""}
+        ]
+
+    @staticmethod
+    def model_file_prompt(paper_content: str, other_contexts: Dict[str, Any] = None) -> List[Dict[str, str]]:
+        """
+        Create a prompt that asks for a complete Python model.py representing the architecture.
+        The code must include explicit tensor dimensions at each step as comments.
+        It must be self-contained and avoid assumptions; simplified is fine but explicit.
+        
+        Inputs include the pseudo-code and architecture deep dive if available.
+        """
+        pseudo_code = {}
+        deep_dive = {}
+        if other_contexts:
+            pseudo_code = other_contexts.get("pseudo_code", {}) or {}
+            deep_dive = other_contexts.get("architecture_deep_dive", {}) or {}
+
+        return [
+            {"role": "system", "content": """You are a meticulous ML engineer who produces clean, self-contained Python implementations.
+Your task is to generate a complete model.py file that implements the paper's architecture.
+You MUST respond with valid JSON format."""},
+            {"role": "user", "content": f"""Resources to base the implementation on:
+
+1) Pseudo-code (selected parts):
+{str(pseudo_code)[:10000]}
+
+2) Architecture deep dive (selected parts):
+{str(deep_dive)[:10000]}
+
+3) Paper excerpt for reference:
+{paper_content[:10000]}
+
+Generate a complete Python model.py file that implements the paper's architecture.
+
+Requirements:
+- Use PyTorch (torch, torch.nn as nn, torch.nn.functional as F) unless otherwise specified
+- No runtime assumptions; expose unknowns as constructor args with docstrings
+- At every transformation, include comments with exact tensor dimensions, e.g. `# [batch, seq_len, 512] -> [batch, seq_len, 1024]`
+- Include a top-level docstring summarizing the model and expected input shapes
+- Include a small `if __name__ == "__main__":` smoke test that instantiates the model and runs forward pass
+- Do not include training loops; focus on architecture only
+
+Format your response as a JSON object with the following structure:
+{{
+  "code": "complete Python code for model.py as a string"
+}}"""}
+        ]
+
+    @staticmethod
     def chat_prompt(user_message: str, analysis_result: Dict[str, Any], chat_history: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, str]]:
         """
         Create a prompt for chat interactions about a previously analyzed paper.

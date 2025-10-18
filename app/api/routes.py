@@ -290,6 +290,16 @@ async def get_chat_history(job_id: str):
     if job_id in analysis_cache:
         job_info = analysis_cache[job_id]
         chat_history = job_info.get("chat_history", [])
+        # If cache has no chat history yet, try loading from storage and hydrate cache
+        if not chat_history:
+            try:
+                loaded_history = json_storage.load_chat_history(job_id)
+                if loaded_history:
+                    chat_history = loaded_history
+                    job_info["chat_history"] = loaded_history
+                    analysis_cache[job_id] = job_info
+            except Exception as e:
+                logging.error(f"Error hydrating chat history from storage: {str(e)}")
     else:
         # Try loading from JSON storage
         try:
