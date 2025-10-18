@@ -252,7 +252,15 @@ For every component, explain:
 - The intuition behind architectural choices
 - How different components interact and affect each other
 
-Think of this as teaching someone who wants to implement this from scratch with complete understanding of every detail."""},
+Think of this as teaching someone who wants to implement this from scratch with complete understanding of every detail.
+
+CRITICAL JSON FORMATTING RULES:
+1. Your response MUST be valid JSON
+2. ALL backslashes in LaTeX must be DOUBLE-ESCAPED in JSON strings
+3. Example: Write "\\\\sigma" not "\\sigma", "\\\\text{}" not "\\text{}"
+4. Example: Write "\\\\frac{1}{2}" not "\\frac{1}{2}"
+5. Always escape special characters: quotes as \\", newlines as \\n
+6. Test your JSON is valid before responding"""},
             {"role": "user", "content": f"""Based on the research paper below, provide an exhaustive, meticulous breakdown of the architecture and methodology.
 
 **Previously Identified Architecture:**
@@ -285,7 +293,7 @@ Format your response as a JSON object with the following structure:
       "component_name": "Name of the architectural component or stage",
       "purpose": "What this component is designed to achieve",
       "detailed_explanation": "Extremely detailed explanation covering math, dimensions, operations, design rationale. Use $...$ for inline math and $$...$$ for display equations in LaTeX format.",
-      "mathematical_formulation": "Key equations or mathematical operations. IMPORTANT: Use proper LaTeX format with $...$ for inline math (e.g., $x^2 + y^2$) and $$...$$ for display equations. Variables like vectors/matrices should be in LaTeX, e.g., $W_{{conv}}$, $\\\\sigma(x)$, $h_{{k,j}}$. Use \\\\text{{}} for text in equations.",
+      "mathematical_formulation": "Key equations or mathematical operations. IMPORTANT: Use proper LaTeX format with $...$ for inline math (e.g., $x^2 + y^2$) and $$...$$ for display equations. Variables like vectors/matrices should be in LaTeX, e.g., $W_{{conv}}$, $\\\\\\\\sigma(x)$, $h_{{k,j}}$. CRITICAL: In JSON, ALL backslashes must be DOUBLE-ESCAPED (write \\\\\\\\ for each backslash). Use \\\\\\\\text{{}} for text in equations.",
       "dimension_analysis": "Input/output dimensions, shape transformations, tensor operations. Use LaTeX for mathematical notation.",
       "design_rationale": "Why this design? What problem does it solve? What alternatives were considered?",
       "subtle_details": "Critical but often overlooked implementation details"
@@ -315,7 +323,9 @@ Format your response as a JSON object with the following structure:
         return [
             {"role": "system", "content": """You are a meticulous ML engineer who produces clean, self-contained Python implementations.
 Your task is to generate a complete model.py file that implements the paper's architecture.
-You MUST respond with valid JSON format."""},
+You MUST respond with valid JSON format.
+
+CRITICAL: In JSON strings, escape backslashes by doubling them (e.g., "\\\\n" for newline in Python code)."""},
             {"role": "user", "content": f"""Resources to base the implementation on:
 
 1) Pseudo-code (selected parts):

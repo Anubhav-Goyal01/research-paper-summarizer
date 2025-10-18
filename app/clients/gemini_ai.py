@@ -140,6 +140,47 @@ class GeminiClient(AIClient):
             logger.warning(f"Error in _try_model_call with model '{model}': {str(e)}")
             return {}
 
+    def fix_json_escaping(self, json_str: str) -> str:
+        """
+        Fix common JSON escaping issues, particularly with LaTeX backslashes.
+        
+        Args:
+            json_str: Raw JSON string that might have escaping issues
+            
+        Returns:
+            Fixed JSON string with proper escaping
+        """
+        try:
+            # This is a delicate operation - we need to fix LaTeX backslashes without breaking other things
+            # Strategy: Replace unescaped backslashes that look like LaTeX commands
+            import re
+            
+            # Common LaTeX commands that need double backslashes in JSON
+            latex_commands = [
+                'text', 'sigma', 'Sigma', 'rightarrow', 'leftarrow', 'overrightarrow', 'overleftarrow',
+                'cdot', 'odot', 'sum', 'prod', 'int', 'frac', 'sqrt', 'alpha', 'beta', 'gamma', 'delta',
+                'epsilon', 'theta', 'lambda', 'mu', 'pi', 'tau', 'phi', 'omega', 'partial', 'nabla',
+                'infty', 'times', 'div', 'pm', 'mp', 'leq', 'geq', 'neq', 'approx', 'sim', 'propto',
+                'forall', 'exists', 'in', 'subset', 'subseteq', 'cap', 'cup', 'emptyset', 'mathbb',
+                'mathcal', 'mathbf', 'mathrm', 'log', 'ln', 'exp', 'sin', 'cos', 'tan', 'lim', 'max', 'min'
+            ]
+            
+            # Fix single backslashes before LaTeX commands
+            for cmd in latex_commands:
+                # Match \command but not \\command (already escaped)
+                pattern = r'(?<!\\)\\' + cmd + r'\b'
+                json_str = re.sub(pattern, r'\\\\' + cmd, json_str)
+            
+            # Fix unescaped backslashes in common LaTeX contexts
+            # Fix \{ and \} (but not \\{ and \\})
+            json_str = re.sub(r'(?<!\\)\\{', r'\\\\{', json_str)
+            json_str = re.sub(r'(?<!\\)\\}', r'\\\\}', json_str)
+            
+            return json_str
+        except Exception as e:
+            logger.warning(f"Error fixing JSON escaping: {str(e)}")
+            return json_str
+
     async def parse_json(self, response: str) -> Dict[str, Any]:
         """
         Attempt to parse a JSON response. If parsing fails,
@@ -160,20 +201,29 @@ class GeminiClient(AIClient):
                 end_index = response.rfind('}')
                 if start_index != -1 and end_index != -1:
                     json_str = response[start_index:end_index+1]
+                    
+                    # Try with escape fixing
                     try:
-                        return json.loads(json_str)
+                        fixed_json = self.fix_json_escaping(json_str)
+                        return json.loads(fixed_json)
                     except Exception:
-                        # Try to extract from code block
-                        json_str = self.extract_json_from_code_block(response)
+                        # Try original
                         try:
-                            if json_str:
-                                start_index = json_str.find('{')
-                                end_index = json_str.rfind('}')
-                                if start_index != -1 and end_index != -1:
-                                    json_str = json_str[start_index:end_index+1]
-                                    return json.loads(json_str)
-                        except Exception as e:
-                            logger.error(f"Error while parsing json from code block: {str(e)}")
+                            return json.loads(json_str)
+                        except Exception:
+                            # Try to extract from code block
+                            json_str = self.extract_json_from_code_block(response)
+                            try:
+                                if json_str:
+                                    start_index = json_str.find('{')
+                                    end_index = json_str.rfind('}')
+                                    if start_index != -1 and end_index != -1:
+                                        json_str = json_str[start_index:end_index+1]
+                                        # Try with escape fixing
+                                        fixed_json = self.fix_json_escaping(json_str)
+                                        return json.loads(fixed_json)
+                            except Exception as e:
+                                logger.error(f"Error while parsing json from code block: {str(e)}")
                 return {}
             except Exception as e:
                 logger.error(f"Error while parsing json: {str(e)}")
