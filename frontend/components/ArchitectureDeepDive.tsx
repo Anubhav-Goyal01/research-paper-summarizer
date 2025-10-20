@@ -11,8 +11,23 @@ interface ArchitectureDeepDiveProps {
 }
 
 // Helper function to convert backtick math notation to LaTeX
-const convertBackticksToLatex = (text: string): string => {
-  if (!text) return text;
+const convertBackticksToLatex = (text: any): string => {
+  // Handle non-string types
+  if (!text) return '';
+  if (typeof text !== 'string') {
+    // If it's an array, join with line breaks
+    if (Array.isArray(text)) {
+      return text.map(item => 
+        typeof item === 'string' ? item : JSON.stringify(item)
+      ).join('\n\n');
+    }
+    // If it's an object, stringify it
+    if (typeof text === 'object') {
+      return JSON.stringify(text, null, 2);
+    }
+    // Convert to string for other types
+    return String(text);
+  }
   
   // Convert backtick-wrapped content that looks like math to LaTeX inline math
   // Pattern: `variable_name` or `equation = something`
